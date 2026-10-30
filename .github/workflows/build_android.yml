@@ -11,11 +11,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: { ref: main }
       - name: Need platforms
         run: test -d android || { echo "::error::شغّل Bootstrap platforms أولاً"; exit 1; }
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with: { distribution: 'temurin', java-version: '17' }
       - uses: subosito/flutter-action@v2
         with: { flutter-version: '3.29.3', channel: 'stable', cache: true }
@@ -26,11 +26,20 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           [ -n "$SUPABASE_URL" ] || echo "::warning::أضف أسرار SUPABASE_URL و SUPABASE_ANON_KEY"
+          set -o pipefail
           flutter build apk --release --split-per-abi --target-platform android-arm64,android-arm \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            --dart-define=SITE_URL="${{ vars.SITE_URL || 'https://tomo.app' }}" --dart-define=SUPPORT_EMAIL="${{ vars.SUPPORT_EMAIL || 'support@tomo.app' }}"
+            --dart-define=SITE_URL="${{ vars.SITE_URL || 'https://tomo.app' }}" --dart-define=SUPPORT_EMAIL="${{ vars.SUPPORT_EMAIL || 'support@tomo.app' }}" 2>&1 | tee /tmp/build.log
           mkdir -p out && cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk out/Tomo.apk
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk out/Tomo-old-phones.apk
+      - name: Publish build log on failure
+        if: failure()
+        run: |
+          mkdir -p /tmp/lg && cd /tmp/lg && git init -q && git checkout -q -b build-log
+          { grep -nE "error|Error|FAILURE|What went wrong|Exception|e: |\.dart:[0-9]+" /tmp/build.log | head -150; echo ----; tail -120 /tmp/build.log; } > build.txt || true
+          git config user.name "tomo-bot"; git config user.email "bot@users.noreply.github.com"
+          git add . && git commit -qm "build log ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" build-log
       - uses: actions/upload-artifact@v4
         with: { name: Tomo-apk, path: out/ }
       - name: Publish to apk-out branch

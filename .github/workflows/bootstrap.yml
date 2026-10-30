@@ -16,7 +16,7 @@ jobs:
       APP_ID: app.tomo
       APP_LABEL: Tomo
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Skip if platforms exist
         id: chk
         run: if [ -d android ] && [ -d ios ] && [ "${{ inputs.force }}" != "yes" ]; then echo "skip=1" >> $GITHUB_OUTPUT; fi
