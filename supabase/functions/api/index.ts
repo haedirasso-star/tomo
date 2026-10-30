@@ -141,6 +141,66 @@ async function delVideoFiles(v: Row) {
   }
 }
 
+/** الحساب الرسمي @totv داخل Tomo (تظهر باسمه ريلز TOTV) — يُنشأ مرة واحدة */
+async function officialId(): Promise<string> {
+  const ex = ((await db("profiles?select=id&username=eq.totv")) as Row[])[0];
+  if (ex) return String(ex.id);
+  const H = { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" };
+  const pw = crypto.randomUUID() + crypto.randomUUID();
+  const r = await fetch(`${SB_URL}/auth/v1/admin/users`, { method: "POST", headers: H, body: JSON.stringify({
+    email: "official-totv@tomo.app", password: pw, email_confirm: true,
+    user_metadata: { username: "totv", name: "TOTV+", birth_year: "2000" },
+  }) });
+  const u = await r.json() as Row;
+  const id = String(u.id ?? "");
+  if (!id) throw new HttpErr(502, "تعذّر إنشاء الحساب الرسمي");
+  await db(`profiles?id=eq.${id}`, { method: "PATCH", prefer: "return=minimal", body: {
+    verified: true, onboarded: true, name: "TOTV+", bio: "أفلام · مسلسلات · مباريات — الحساب الرسمي لـ TOTV+",
+  } });
+  return id;
+}
+
+/** ① ريلز TOTV ⇐ Tomo (باسم @totv) · ② فيديوهات Tomo ⇐ ريلز TOTV */
+async function syncWithTotv() {
+  const out = { totv_in: 0, totv_removed: 0, tomo_out: 0 };
+  // ── ① من TOTV: القائمة العامة على R2 (نفس ما يقرؤه تطبيق TOTV) ──
+  const base = R2_PUBLIC || "https://cdn.totv.app";
+  const fr = await fetch(`${base}/feeds/reels.json?t=${Date.now()}`);
+  if (fr.ok) {
+    const items = ((await fr.json()) as Row).items as Row[] ?? [];
+    const keep = items.filter((r) => r.ready !== false && r.active !== false && r.kind !== "ad" && r.sponsored !== true
+      && !(int(r.cid) > 0) && String(r.video ?? "").startsWith("https://") && !String(r.video).includes(".m3u8")
+      && !String(r.id ?? "").startsWith("tm_"));
+    const owner = await officialId();
+    const have = (await db("videos?select=id,ext_id&source=eq.totv&limit=2000")) as Row[];
+    const haveIds = new Set(have.map((h) => String(h.ext_id)));
+    const want = new Set(keep.map((r) => `totv:${r.id}`));
+    const fresh = keep.filter((r) => !haveIds.has(`totv:${r.id}`)).slice(0, 100).map((r) => ({
+      user_id: owner, source: "totv", ext_id: `totv:${r.id}`, status: "ready", privacy: "public", allow_comments: true,
+      caption: clip([r.title, r.desc].filter((x) => String(x ?? "").trim()).join("\n"), 2200),
+      url: String(r.video), poster: String(r.poster ?? ""), duration: int(r.length),
+      created_at: String(r.created ?? "") || new Date().toISOString(),
+    }));
+    if (fresh.length) await db("videos", { method: "POST", prefer: "return=minimal", body: fresh });
+    out.totv_in = fresh.length;
+    const gone = have.filter((h) => !want.has(String(h.ext_id))).map((h) => String(h.id));
+    for (let i = 0; i < gone.length; i += 50) {
+      await db(`videos?id=in.(${gone.slice(i, i + 50).join(",")})`, { method: "DELETE", prefer: "return=minimal" });
+    }
+    out.totv_removed = gone.length;
+  }
+  // ── ② إلى TOTV: أحدث فيديوهات Tomo العامة ──
+  if (BRIDGE) {
+    const list = (await db("rpc/share_list", { method: "POST", body: { p_limit: 150 } })) as Row[];
+    const r = await totv("tomo_reels", { items: list.map((v) => ({
+      id: String(v.id), title: clip(v.caption, 200), video: String(v.url), poster: String(v.poster ?? ""),
+      length: int(v.duration), user: String(v.username ?? ""), created: String(v.created_at ?? ""),
+    })) }) as Row;
+    out.tomo_out = int(r.count);
+  }
+  return out;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -194,6 +254,9 @@ Deno.serve(async (req) => {
           if (!r.ok || !j.signedURL) throw new HttpErr(404, "الوصل غير موجود");
           return json({ ok: true, url: `${SB_URL}/storage/v1${j.signedURL}` });
         }
+        // ════ تبادل الفيديوهات مع TOTV (كل 15 دقيقة من GitHub) ════
+        case "bridge_sync":
+          return json({ ok: true, ...(await syncWithTotv()) });
         case "bridge_stats":
           return json({ ok: true, stats: await (async () => {
             const c = (q: string) => db(q).then((x) => (x as Row[]).length).catch(() => 0);

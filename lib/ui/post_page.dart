@@ -103,7 +103,7 @@ class _PostPageState extends State<PostPage> {
         child: Padding(
           padding: const EdgeInsets.all(28),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.video_call_outlined, size: 72, color: E.ink3),
+            Icon(Icons.video_call_outlined, size: 72, color: E.ink3),
             const SizedBox(height: 14),
             Text('شارك فيديو', style: E.t(20, w: FontWeight.w800)),
             const SizedBox(height: 6),
@@ -160,7 +160,7 @@ class _PostPageState extends State<PostPage> {
         title: Text('من يمكنه مشاهدة الفيديو', style: E.t(15, w: FontWeight.w600)),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           Text(const {'public': 'الجميع', 'friends': 'الأصدقاء', 'private': 'أنا فقط'}[_privacy]!, style: E.t(14, c: E.ink3)),
-          const Icon(Icons.chevron_left_rounded, color: E.ink3),
+          Icon(Icons.chevron_left_rounded, color: E.ink3),
         ]),
         onTap: () async {
           final p = await sheetMenu<String>(context, [

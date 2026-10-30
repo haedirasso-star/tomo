@@ -17,7 +17,7 @@ class _UserListPageState extends State<UserListPage> {
         child: Scaffold(
           appBar: AppBar(
             title: Text(widget.title),
-            bottom: const TabBar(indicatorColor: E.ink, labelColor: E.ink, unselectedLabelColor: E.ink3,
+            bottom: TabBar(indicatorColor: E.ink, labelColor: E.ink, unselectedLabelColor: E.ink3,
                 tabs: [Tab(text: 'أتابعه'), Tab(text: 'المتابِعون')]),
           ),
           body: TabBarView(children: [_List(uid: widget.uid, followers: false), _List(uid: widget.uid, followers: true)]),

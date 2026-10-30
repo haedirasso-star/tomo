@@ -12,7 +12,7 @@ class AdminPage extends StatelessWidget {
         child: Scaffold(
           appBar: AppBar(
             title: const Text('لوحة الإدارة'),
-            bottom: const TabBar(isScrollable: true, tabAlignment: TabAlignment.start, indicatorColor: E.ink, labelColor: E.ink,
+            bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, indicatorColor: E.ink, labelColor: E.ink,
                 unselectedLabelColor: E.ink3, tabs: [Tab(text: 'نظرة عامة'), Tab(text: 'الترويج'), Tab(text: 'البلاغات'), Tab(text: 'الأسعار والدفع')]),
           ),
           body: const TabBarView(children: [_AdminStats(), _AdminPromos(), _AdminReports(), _AdminRates()]),
@@ -102,7 +102,7 @@ class _AdminPromosState extends State<_AdminPromos> with AutomaticKeepAliveClien
     if (op == 'reject' || op == 'unpaid') {
       final t = TextEditingController();
       final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: E.card,
         title: Text(op == 'reject' ? 'سبب الرفض' : 'ملاحظة للمستخدم', style: E.t(16, w: FontWeight.w700)),
         content: TextField(controller: t, maxLines: 3, decoration: const InputDecoration(hintText: 'يظهر للمستخدم في الإشعار')),
         actions: [
@@ -163,7 +163,7 @@ class _AdminPromosState extends State<_AdminPromos> with AutomaticKeepAliveClien
                                   if (v != null && context.mounted) VideoListPage.open(context, [v], 0);
                                 },
                                 child: ClipRRect(borderRadius: BorderRadius.circular(6), child: SizedBox(width: 48, height: 64,
-                                    child: c.s('poster').isEmpty ? const ColoredBox(color: E.soft) : CachedNetworkImage(imageUrl: c.s('poster'), fit: BoxFit.cover))),
+                                    child: c.s('poster').isEmpty ? ColoredBox(color: E.soft) : CachedNetworkImage(imageUrl: c.s('poster'), fit: BoxFit.cover))),
                               ),
                               const SizedBox(width: 10),
                               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -356,7 +356,7 @@ class _AdminRatesState extends State<_AdminRates> with AutomaticKeepAliveClientM
     final m = i == null ? <String, dynamic>{} : _methods[i];
     final n = TextEditingController(text: m.s('name')), a = TextEditingController(text: m.s('account')), h = TextEditingController(text: m.s('holder'));
     final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: E.card,
       title: Text(i == null ? 'طريقة دفع جديدة' : 'تعديل', style: E.t(16, w: FontWeight.w700)),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
         TextField(controller: n, decoration: const InputDecoration(hintText: 'الاسم — مثال: زين كاش')),

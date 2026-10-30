@@ -142,7 +142,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
               top: false,
               child: Container(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                decoration: const BoxDecoration(border: Border(top: BorderSide(color: E.line))),
+                decoration: BoxDecoration(border: Border(top: BorderSide(color: E.line))),
                 child: Row(children: [
                   Avatar(Me.profile?.avatar ?? '', name: Me.profile?.username ?? '', size: 34),
                   const SizedBox(width: 10),

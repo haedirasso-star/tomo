@@ -268,7 +268,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                 if (u != null) launchUrl(u, mode: LaunchMode.externalApplication);
               },
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.link_rounded, size: 17, color: E.ink),
+                Icon(Icons.link_rounded, size: 17, color: E.ink),
                 const SizedBox(width: 4),
                 Flexible(child: Text(p.link, maxLines: 1, overflow: TextOverflow.ellipsis, textDirection: TextDirection.ltr,
                     style: E.t(14, w: FontWeight.w700))),
@@ -353,7 +353,7 @@ class _TabsHeader extends SliverPersistentHeaderDelegate {
   @override
   double get maxExtent => bar.preferredSize.height;
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => ColoredBox(color: Colors.white, child: bar);
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => ColoredBox(color: E.bg, child: bar);
   @override
   bool shouldRebuild(covariant _TabsHeader old) => old.bar != bar;
 }
@@ -373,12 +373,12 @@ class _MenuDrawer extends StatelessWidget {
     Widget item(IconData i, String t, VoidCallback onTap) => ListTile(
           leading: Icon(i, color: E.ink, size: 26),
           title: Text(t, style: E.t(16, w: FontWeight.w600)),
-          trailing: const Icon(Icons.chevron_left_rounded, color: E.ink3),
+          trailing: Icon(Icons.chevron_left_rounded, color: E.ink3),
           onTap: onTap,
         );
 
     return Drawer(
-      backgroundColor: Colors.white,
+      backgroundColor: E.card,
       shape: const RoundedRectangleBorder(),
       child: SafeArea(
         child: ListView(children: [

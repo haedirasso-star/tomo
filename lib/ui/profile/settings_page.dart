@@ -43,6 +43,18 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _theme() async {
+    final r = await sheetMenu<String>(context, [
+      (Icons.brightness_auto_outlined, 'تلقائي (حسب الهاتف)', 'system', E.mode.value == 'system'),
+      (Icons.light_mode_outlined, 'فاتح', 'light', E.mode.value == 'light'),
+      (Icons.dark_mode_outlined, 'داكن (الوضع الليلي)', 'dark', E.mode.value == 'dark'),
+    ]);
+    if (r != null) {
+      await E.setMode(r);
+      if (mounted) setState(() {});
+    }
+  }
+
   Future<void> _logout() async {
     if (!await confirm(context, 'تسجيل الخروج؟', '', ok: 'خروج')) return;
     await Trk.flush();
@@ -57,8 +69,8 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final email = sb.auth.currentUser?.email ?? '';
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F7),
-      appBar: AppBar(backgroundColor: const Color(0xFFF6F6F7), title: const Text('الإعدادات والخصوصية')),
+      backgroundColor: E.page,
+      appBar: AppBar(backgroundColor: E.page, title: const Text('الإعدادات والخصوصية')),
       body: ListView(padding: const EdgeInsets.fromLTRB(14, 4, 14, 30), children: [
         _group('النشاط', [
           _item(Icons.video_settings_outlined, 'إدارة المنشورات', () => _go(const ManagePostsPage())),
@@ -82,6 +94,10 @@ class _SettingsPageState extends State<SettingsPage> {
           _switch(Icons.lock_outline_rounded, 'حساب خاص', 'فيديوهاتك لأصدقائك فقط', p?.private ?? false, (v) => _set({'private': v})),
           _item(Icons.mail_outline_rounded, 'من يمكنه مراسلتي', _dm,
               trailing: const {'everyone': 'الجميع', 'friends': 'الأصدقاء', 'none': 'لا أحد'}[p?.dm ?? 'friends'] ?? ''),
+        ]),
+        _group('العرض', [
+          _item(E.dark ? Icons.dark_mode_outlined : Icons.light_mode_outlined, 'المظهر', _theme,
+              trailing: const {'system': 'تلقائي', 'light': 'فاتح', 'dark': 'داكن'}[E.mode.value] ?? ''),
         ]),
         _group('الذاكرة والبيانات', [
           _item(Icons.cleaning_services_outlined, 'مسح الكاش', () async {
@@ -108,7 +124,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _group(String title, List<Widget> items) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         if (title.isNotEmpty) Padding(padding: const EdgeInsets.fromLTRB(8, 18, 8, 8), child: Text(title, style: E.t(13, c: E.ink3))) else const SizedBox(height: 18),
         Container(
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: E.card, borderRadius: BorderRadius.circular(12)),
           child: Column(children: items),
         ),
       ]);
@@ -121,7 +137,7 @@ class _SettingsPageState extends State<SettingsPage> {
           if (trailing.isNotEmpty)
             ConstrainedBox(constraints: const BoxConstraints(maxWidth: 150),
                 child: Text(trailing, maxLines: 1, overflow: TextOverflow.ellipsis, style: E.t(13, c: E.ink3))),
-          if (!danger) const Icon(Icons.chevron_left_rounded, color: E.ink3),
+          if (!danger) Icon(Icons.chevron_left_rounded, color: E.ink3),
         ]),
         onTap: onTap,
       );
@@ -143,7 +159,7 @@ class AccountPage extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: E.card,
         title: Text('كلمة مرور جديدة', style: E.t(17, w: FontWeight.w700)),
         content: TextField(controller: c, obscureText: true, textDirection: TextDirection.ltr, decoration: const InputDecoration(hintText: '6 أحرف على الأقل')),
         actions: [
@@ -324,7 +340,7 @@ class AnalyticsPage extends StatelessWidget {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: ClipRRect(borderRadius: BorderRadius.circular(6), child: SizedBox(width: 44, height: 58,
-                      child: v.poster.isEmpty ? const ColoredBox(color: E.soft) : CachedNetworkImage(imageUrl: v.poster, fit: BoxFit.cover))),
+                      child: v.poster.isEmpty ? ColoredBox(color: E.soft) : CachedNetworkImage(imageUrl: v.poster, fit: BoxFit.cover))),
                   title: Text(v.caption.isEmpty ? '(بلا وصف)' : v.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: Text('▶ ${fmtN(v.views)} · ♥ ${fmtN(v.likes)} · 💬 ${fmtN(v.comments)}', style: E.t(12.5, c: E.ink3)),
                   onTap: () => VideoListPage.open(context, top, top.indexOf(v)),

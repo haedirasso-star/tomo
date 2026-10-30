@@ -62,6 +62,7 @@ part 'ui/onboarding_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Prefs.init();
+  E.resolve();
   if (Cfg.ready) {
     await Supabase.initialize(
       url: Cfg.supabaseUrl,
@@ -75,11 +76,47 @@ Future<void> main() async {
   runApp(const TomoApp());
 }
 
-class TomoApp extends StatelessWidget {
+class TomoApp extends StatefulWidget {
   const TomoApp({super.key});
+  @override
+  State<TomoApp> createState() => _TomoAppState();
+}
+
+/// يتابع وضع الهاتف (ليلي/نهاري) واختيار المستخدم، ويعيد رسم كل الشاشات فوراً
+class _TomoAppState extends State<TomoApp> with WidgetsBindingObserver {
+  final _nav = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    E.mode.addListener(_apply);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    E.mode.removeListener(_apply);
+    super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() => _apply();
+
+  void _apply() {
+    final was = E.dark;
+    E.resolve();
+    if (was == E.dark || !mounted) return;
+    setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final c = _nav.currentContext;
+      if (c != null) E.repaintAll(c);
+    });
+  }
 
   @override
   Widget build(BuildContext context) => MaterialApp(
+        navigatorKey: _nav,
         title: Cfg.appName,
         debugShowCheckedModeBanner: false,
         theme: E.theme(),

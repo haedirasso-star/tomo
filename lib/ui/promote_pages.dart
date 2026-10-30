@@ -14,7 +14,7 @@ class _Box extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: padding,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: E.line)),
+        decoration: BoxDecoration(color: E.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: E.line)),
         child: child,
       );
 }
@@ -112,9 +112,9 @@ class _PromotePageState extends State<PromotePage> {
   Widget build(BuildContext context) {
     final r = _r;
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F7),
+      backgroundColor: E.page,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF6F6F7),
+        backgroundColor: E.page,
         title: const Text('ترويج الفيديو'),
         leading: IconButton(icon: const Icon(Icons.arrow_back_rounded),
             onPressed: () => _step > 0 ? setState(() => _step--) : Navigator.pop(context)),
@@ -156,7 +156,7 @@ class _PromotePageState extends State<PromotePage> {
     return [
       _Box(child: Row(children: [
         ClipRRect(borderRadius: BorderRadius.circular(8), child: SizedBox(width: 54, height: 72,
-            child: widget.video.poster.isEmpty ? const ColoredBox(color: E.soft)
+            child: widget.video.poster.isEmpty ? ColoredBox(color: E.soft)
                 : CachedNetworkImage(imageUrl: widget.video.poster, fit: BoxFit.cover))),
         const SizedBox(width: 12),
         Expanded(child: Text(widget.video.caption.isEmpty ? 'فيديوك' : widget.video.caption, maxLines: 3, overflow: TextOverflow.ellipsis,
@@ -178,7 +178,7 @@ class _PromotePageState extends State<PromotePage> {
           ChoiceChip(
             label: Text(fmtIqd(p)), selected: _budget == p, showCheckmark: false,
             selectedColor: E.ink, labelStyle: E.t(14, w: FontWeight.w700, c: _budget == p ? Colors.white : E.ink),
-            backgroundColor: Colors.white, side: const BorderSide(color: E.line),
+            backgroundColor: E.card, side: BorderSide(color: E.line),
             onSelected: (_) => setState(() { _budget = p; _custom.clear(); }),
           ),
       ]),
@@ -186,7 +186,7 @@ class _PromotePageState extends State<PromotePage> {
       TextField(
         controller: _custom, keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: InputDecoration(hintText: 'مبلغ آخر (د.ع)', fillColor: Colors.white,
+        decoration: InputDecoration(hintText: 'مبلغ آخر (د.ع)', fillColor: E.card,
             helperText: 'أقل مبلغ ${fmtIqd(r.minBudget)} — تقريباً \$${(_budget / r.usd).toStringAsFixed(1)}'),
         onChanged: (t) { final n = int.tryParse(t); if (n != null) setState(() => _budget = n); },
       ),
@@ -217,13 +217,13 @@ class _PromotePageState extends State<PromotePage> {
             ChoiceChip(
               label: Text(l), selected: _label.text == l, showCheckmark: false,
               selectedColor: E.ink, labelStyle: E.t(13.5, w: FontWeight.w700, c: _label.text == l ? Colors.white : E.ink),
-              backgroundColor: Colors.white, side: const BorderSide(color: E.line),
+              backgroundColor: E.card, side: BorderSide(color: E.line),
               onSelected: (_) => setState(() => _label.text = l),
             ),
         ]),
         const SizedBox(height: 10),
         TextField(controller: _link, keyboardType: TextInputType.url, textDirection: TextDirection.ltr,
-            decoration: const InputDecoration(hintText: 'https://example.com', fillColor: Colors.white)),
+            decoration: InputDecoration(hintText: 'https://example.com', fillColor: E.card)),
         const SizedBox(height: 22),
         Text('المدة', style: E.t(16, w: FontWeight.w800)),
         const SizedBox(height: 8),
@@ -232,7 +232,7 @@ class _PromotePageState extends State<PromotePage> {
             ChoiceChip(
               label: Text('$d أيام'), selected: _days == d, showCheckmark: false,
               selectedColor: E.ink, labelStyle: E.t(13.5, w: FontWeight.w700, c: _days == d ? Colors.white : E.ink),
-              backgroundColor: Colors.white, side: const BorderSide(color: E.line),
+              backgroundColor: E.card, side: BorderSide(color: E.line),
               onSelected: (_) => setState(() => _days = d),
             ),
         ]),
@@ -278,8 +278,8 @@ class _PromotePageState extends State<PromotePage> {
 }
 
 Widget _blackPill(String label, VoidCallback? onTap, {bool busy = false, bool white = false}) => Material(
-      color: white ? Colors.white : E.ink,
-      shape: StadiumBorder(side: white ? const BorderSide(color: E.line) : BorderSide.none),
+      color: white ? E.card : E.ink,
+      shape: StadiumBorder(side: white ? BorderSide(color: E.line) : BorderSide.none),
       child: InkWell(
         customBorder: const StadiumBorder(),
         onTap: busy ? null : onTap,
@@ -327,7 +327,7 @@ class _PromotePayPageState extends State<PromotePayPage> {
       await PromoApi.pay(widget.promo, method: methods.isEmpty ? 'تحويل' : methods[_method].s('name'), receipt: _receipt!, txn: _txn.text.trim());
       if (!mounted) return;
       await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: E.card,
         title: Text('وصلنا طلبك ✓', style: E.t(17, w: FontWeight.w800)),
         content: Text('رقم الطلب ${widget.promo.code}\nسنراجع الدفع والفيديو ويبدأ الترويج فور الموافقة — يصلك إشعار.', style: E.t(14, c: E.ink2, h: 1.6)),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('حسناً'))],
@@ -343,8 +343,8 @@ class _PromotePayPageState extends State<PromotePayPage> {
     final p = widget.promo;
     final methods = widget.rates.methods;
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F7),
-      appBar: AppBar(backgroundColor: const Color(0xFFF6F6F7), title: const Text('الدفع')),
+      backgroundColor: E.page,
+      appBar: AppBar(backgroundColor: E.page, title: const Text('الدفع')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         Container(
           padding: const EdgeInsets.all(20),
@@ -383,7 +383,7 @@ class _PromotePayPageState extends State<PromotePayPage> {
                 onTap: () => setState(() => _method = i),
                 child: Container(
                   padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14),
+                  decoration: BoxDecoration(color: E.card, borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: _method == i ? E.ink : E.line, width: _method == i ? 1.6 : 1)),
                   child: Row(children: [
                     Icon(_method == i ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded, color: E.ink),
@@ -408,11 +408,11 @@ class _PromotePayPageState extends State<PromotePayPage> {
           onTap: _pick,
           child: Container(
             height: _receipt == null ? 110 : 220,
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: E.line)),
+            decoration: BoxDecoration(color: E.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: E.line)),
             clipBehavior: Clip.antiAlias,
             child: _receipt == null
                 ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.add_photo_alternate_outlined, size: 32, color: E.ink2),
+                    Icon(Icons.add_photo_alternate_outlined, size: 32, color: E.ink2),
                     const SizedBox(height: 6),
                     Text('اضغط لإرفاق لقطة شاشة التحويل', style: E.t(13.5, c: E.ink2)),
                   ])
@@ -420,7 +420,7 @@ class _PromotePayPageState extends State<PromotePayPage> {
           ),
         ),
         const SizedBox(height: 10),
-        TextField(controller: _txn, decoration: const InputDecoration(hintText: 'رقم العملية (اختياري)', fillColor: Colors.white)),
+        TextField(controller: _txn, decoration: InputDecoration(hintText: 'رقم العملية (اختياري)', fillColor: E.card)),
         if (_err.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_err, style: E.t(13, c: E.accent))),
         const SizedBox(height: 18),
         _blackPill('تأكيد الدفع', _busy ? null : _confirm, busy: _busy),
@@ -465,8 +465,8 @@ class _MyPromosPageState extends State<MyPromosPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFFF6F6F7),
-        appBar: AppBar(backgroundColor: const Color(0xFFF6F6F7), title: const Text('ترويجاتي')),
+        backgroundColor: E.page,
+        appBar: AppBar(backgroundColor: E.page, title: const Text('ترويجاتي')),
         body: _l == null
             ? const Loading()
             : _l!.isEmpty
@@ -491,7 +491,7 @@ class _MyPromosPageState extends State<MyPromosPage> {
                             padding: const EdgeInsets.all(12),
                             child: Row(children: [
                               ClipRRect(borderRadius: BorderRadius.circular(8), child: SizedBox(width: 50, height: 66,
-                                  child: poster.isEmpty ? const ColoredBox(color: E.soft) : CachedNetworkImage(imageUrl: poster, fit: BoxFit.cover))),
+                                  child: poster.isEmpty ? ColoredBox(color: E.soft) : CachedNetworkImage(imageUrl: poster, fit: BoxFit.cover))),
                               const SizedBox(width: 12),
                               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                 Row(children: [
@@ -556,8 +556,8 @@ class _PromoDetailPageState extends State<PromoDetailPage> {
   Widget build(BuildContext context) {
     final p = _p;
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F7),
-      appBar: AppBar(backgroundColor: const Color(0xFFF6F6F7), title: Text(p?.code ?? 'الترويج')),
+      backgroundColor: E.page,
+      appBar: AppBar(backgroundColor: E.page, title: Text(p?.code ?? 'الترويج')),
       body: p == null
           ? const Loading()
           : RefreshIndicator(
@@ -641,7 +641,7 @@ class _PromoDetailPageState extends State<PromoDetailPage> {
 
   Widget _stat(String n, String l) => Container(
         padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: E.line)),
+        decoration: BoxDecoration(color: E.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: E.line)),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Text(n, style: E.t(18, w: FontWeight.w800)),
           Text(l, textAlign: TextAlign.center, style: E.t(11.5, c: E.ink3)),

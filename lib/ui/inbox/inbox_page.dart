@@ -56,7 +56,7 @@ class _InboxPageState extends State<InboxPage> {
     if (!mounted) return;
     if (friends.isEmpty) { toast(context, 'المراسلة متاحة مع الأصدقاء (متابعة متبادلة)'); return; }
     final p = await showModalBottomSheet<Profile>(
-      context: context, showDragHandle: true, backgroundColor: Colors.white, isScrollControlled: true,
+      context: context, showDragHandle: true, backgroundColor: E.card, isScrollControlled: true,
       builder: (ctx) => SizedBox(
         height: MediaQuery.of(ctx).size.height * 0.6,
         child: ListView(children: [
@@ -112,7 +112,7 @@ class _InboxPageState extends State<InboxPage> {
         leading: CircleAvatar(radius: 26, backgroundColor: color, child: Icon(icon, color: Colors.white, size: 26)),
         title: Text(title, style: E.t(15.5, w: FontWeight.w700)),
         subtitle: Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: E.t(13, c: E.ink3)),
-        trailing: badge > 0 ? Badge(label: Text('$badge'), backgroundColor: E.accent) : const Icon(Icons.chevron_left_rounded, color: E.ink3),
+        trailing: badge > 0 ? Badge(label: Text('$badge'), backgroundColor: E.accent) : Icon(Icons.chevron_left_rounded, color: E.ink3),
       );
 
   Widget _conv(Conv c) {

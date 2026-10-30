@@ -80,7 +80,7 @@ class _SplashIntroState extends State<SplashIntro> with SingleTickerProviderStat
   Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
         child: Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: E.card,
           body: Stack(children: [
             Center(
               child: AnimatedBuilder(
@@ -139,7 +139,7 @@ class WelcomePage extends StatelessWidget {
   Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
         child: Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: E.card,
           body: SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -182,9 +182,9 @@ class _WideButton extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
         width: double.infinity, height: 50,
         child: Material(
-          color: primary ? (onTap == null ? E.accent.withOpacity(0.35) : E.accent) : Colors.white,
+          color: primary ? (onTap == null ? E.accent.withOpacity(0.35) : E.accent) : E.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25),
-              side: primary ? BorderSide.none : const BorderSide(color: Color(0xFFDBDBDB))),
+              side: primary ? BorderSide.none : BorderSide(color: E.border)),
           child: InkWell(
             customBorder: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
             onTap: busy ? null : onTap,
@@ -262,7 +262,7 @@ class _AuthPageState extends State<AuthPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: E.card,
         appBar: AppBar(
           leading: IconButton(icon: const Icon(Icons.close_rounded, size: 26), onPressed: () => Navigator.pop(context)),
           actions: [IconButton(icon: const Icon(Icons.help_outline_rounded), onPressed: () => LegalPage.open(context, terms: true))],
@@ -308,7 +308,7 @@ class _AuthPageState extends State<AuthPage> {
             ),
           Container(
             width: double.infinity,
-            color: const Color(0xFFF8F8F8),
+            color: E.soft,
             child: SafeArea(
               top: false,
               child: Padding(
@@ -339,8 +339,8 @@ class _Method extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Material(
-          color: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4), side: const BorderSide(color: Color(0xFFE3E3E4))),
+          color: E.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4), side: BorderSide(color: E.line)),
           child: InkWell(
             borderRadius: BorderRadius.circular(4),
             onTap: onTap,
@@ -383,8 +383,8 @@ Widget _stepTitle(String t, [String sub = '']) => Column(crossAxisAlignment: Cro
 InputDecoration _underline(String hint, {Widget? suffix, String? prefix}) => InputDecoration(
       hintText: hint, filled: false, prefixText: prefix, suffixIcon: suffix,
       contentPadding: const EdgeInsets.symmetric(vertical: 12),
-      enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE3E3E4))),
-      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: E.ink, width: 1.4)),
+      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: E.line)),
+      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: E.ink, width: 1.4)),
       border: const UnderlineInputBorder(),
     );
 
@@ -473,7 +473,7 @@ class _SignupFlowState extends State<_SignupFlow> {
         canPop: _step == 0,
         onPopInvokedWithResult: (did, _) { if (!did) _back(); },
         child: Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: E.card,
           appBar: AppBar(
             leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: _back),
             title: Text('التسجيل', style: E.t(16.5, w: FontWeight.w700)),
@@ -499,7 +499,7 @@ class _SignupFlowState extends State<_SignupFlow> {
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE3E3E4)))),
+          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: E.line))),
           child: Text(b == null ? 'تاريخ الميلاد' : '${b.day} / ${b.month} / ${b.year}',
               style: E.t(17, w: b == null ? FontWeight.w400 : FontWeight.w700, c: b == null ? E.ink3 : E.ink)),
         ),
@@ -601,7 +601,7 @@ class _CheckEmailPage extends StatelessWidget {
   const _CheckEmailPage({required this.email});
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: E.card,
         appBar: AppBar(),
         body: Padding(
           padding: const EdgeInsets.all(28),
@@ -610,7 +610,7 @@ class _CheckEmailPage extends StatelessWidget {
             Container(
               width: 96, height: 96,
               decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: E.ink, width: 2)),
-              child: const Icon(Icons.mark_email_unread_outlined, size: 46, color: E.ink),
+              child: Icon(Icons.mark_email_unread_outlined, size: 46, color: E.ink),
             ),
             const SizedBox(height: 24),
             Text('تحقق من بريدك', style: E.t(23, w: FontWeight.w800)),
@@ -677,7 +677,7 @@ class _LoginPageState extends State<_LoginPage> {
   Future<void> _forgot() async {
     final c = TextEditingController(text: _id.text.contains('@') ? _id.text.trim() : '');
     final ok = await showModalBottomSheet<bool>(
-      context: context, isScrollControlled: true, backgroundColor: Colors.white, showDragHandle: true,
+      context: context, isScrollControlled: true, backgroundColor: E.card, showDragHandle: true,
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(24, 0, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -702,7 +702,7 @@ class _LoginPageState extends State<_LoginPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: E.card,
         appBar: AppBar(title: Text('تسجيل الدخول', style: E.t(16.5, w: FontWeight.w700))),
         body: ListView(padding: const EdgeInsets.fromLTRB(24, 24, 24, 16), children: [
           TextField(controller: _id, textDirection: TextDirection.ltr, autocorrect: false, keyboardType: TextInputType.emailAddress,

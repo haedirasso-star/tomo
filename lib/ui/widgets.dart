@@ -163,7 +163,7 @@ class VideoGrid extends StatelessWidget {
 Future<T?> sheetMenu<T>(BuildContext context, List<(IconData, String, T, bool)> items) => showModalBottomSheet<T>(
       context: context,
       showDragHandle: true,
-      backgroundColor: Colors.white,
+      backgroundColor: E.card,
       builder: (ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           for (final it in items)
@@ -181,7 +181,7 @@ Future<bool> confirm(BuildContext context, String title, String body, {String ok
   final r = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: E.card,
       title: Text(title, style: E.t(17, w: FontWeight.w700)),
       content: Text(body, style: E.t(14, c: E.ink2)),
       actions: [

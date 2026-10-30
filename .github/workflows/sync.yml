@@ -1,0 +1,22 @@
+# تبادل الفيديوهات مع TOTV كل 15 دقيقة: ريلز TOTV ⇐ Tomo (@totv) · فيديوهات Tomo ⇐ ريلز TOTV
+name: Sync with TOTV
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+concurrency: { group: sync, cancel-in-progress: false }
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      REF: ${{ secrets.SUPABASE_PROJECT_REF || 'kjujtlehsgykzbreqyyo' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Sync
+        run: |
+          S=$(.github/scripts/vault.sh get bridge | jq -r .secret); echo "::add-mask::$S"
+          c=$(curl -s -o /tmp/r.json -w '%{http_code}' -X POST "https://$REF.supabase.co/functions/v1/api" \
+            -H 'Content-Type: application/json' -H "x-bridge: $S" -d '{"action":"bridge_sync"}')
+          echo "::notice::sync $c $(head -c 300 /tmp/r.json)"
+          [ "$c" = 200 ]

@@ -33,7 +33,7 @@ class _ShellState extends State<Shell> {
     final limit = Prefs.p.getInt('screen_limit') ?? 0;
     if (limit > 0 && m == limit && mounted) {
       showDialog<void>(context: context, builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: E.card,
         title: Text('وقت الاستراحة؟', style: E.t(17, w: FontWeight.w700)),
         content: Text('استخدمت ${Cfg.appName} $m دقيقة اليوم. خذ استراحة قصيرة 🌿', style: E.t(14, c: E.ink2)),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('حسناً'))],

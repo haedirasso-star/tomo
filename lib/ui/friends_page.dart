@@ -183,7 +183,7 @@ class _SearchPageState extends State<SearchPage> {
             child: TextField(
               controller: _c, autofocus: true, onChanged: _changed, textInputAction: TextInputAction.search,
               decoration: InputDecoration(hintText: 'ابحث عن حسابات', isDense: true,
-                  prefixIcon: const Icon(Icons.search_rounded, color: E.ink3),
+                  prefixIcon: Icon(Icons.search_rounded, color: E.ink3),
                   suffixIcon: _busy ? const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))) : null),
             ),
           ),

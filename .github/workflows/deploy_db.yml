@@ -21,7 +21,7 @@ jobs:
       - name: Apply SQL
         if: steps.chk.outputs.skip != '1'
         run: |
-          for f in schema 02_safety 03_promote 04_admin; do
+          for f in schema 02_safety 03_promote 04_admin 05_sync; do
             jq -Rs '{query: .}' "supabase/$f.sql" > /tmp/q.json
             code=$(curl -s -o /tmp/out.json -w '%{http_code}' -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
               -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" --data @/tmp/q.json)
