@@ -1,0 +1,100 @@
+# ينشئ مجلدي android و ios نظيفين (مرة واحدة) ويضبط: الاسم · المعرّف · رابط العودة بعد الدخول بغوغل/فيسبوك/آبل
+# · منع النسخ الاحتياطي للبيانات الحساسة · أسباب الصلاحيات (كاميرا/صور/مايك) — ثم يحفظهما في المستودع
+name: Bootstrap platforms
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force: { description: 'إعادة الإنشاء حتى لو موجودة (yes)', required: false, default: 'no' }
+permissions:
+  contents: write
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    env:
+      APP_ID: app.tomo
+      APP_LABEL: Tomo
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip if platforms exist
+        id: chk
+        run: if [ -d android ] && [ -d ios ] && [ "${{ inputs.force }}" != "yes" ]; then echo "skip=1" >> $GITHUB_OUTPUT; fi
+      - uses: subosito/flutter-action@v2
+        if: steps.chk.outputs.skip != '1'
+        with: { flutter-version: '3.29.3', channel: 'stable', cache: true }
+      - name: Create platforms
+        if: steps.chk.outputs.skip != '1'
+        run: |
+          rm -rf android ios
+          flutter create --org app.tomo --project-name tomo --platforms android,ios --no-pub .
+          rm -rf test
+      - name: Configure
+        if: steps.chk.outputs.skip != '1'
+        run: |
+          python3 - <<'PY'
+          import os, re
+          app_id, label = os.environ['APP_ID'], os.environ['APP_LABEL']
+          # ── Android ──
+          p = 'android/app/src/main/AndroidManifest.xml'; s = open(p).read()
+          s = s.replace('android:label="tomo"', f'android:label="{label}"')
+          s = s.replace('<application', '<uses-permission android:name="android.permission.INTERNET"/>\n    <application\n        android:allowBackup="false"\n        android:fullBackupContent="false"\n        android:usesCleartextTraffic="false"', 1)
+          link = '\n'.join([
+              '            <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />',
+              '            <intent-filter>',
+              '                <action android:name="android.intent.action.VIEW" />',
+              '                <category android:name="android.intent.category.DEFAULT" />',
+              '                <category android:name="android.intent.category.BROWSABLE" />',
+              f'                <data android:scheme="{app_id}" android:host="login-callback" />',
+              '            </intent-filter>',
+              '        </activity>'])
+          s = s.replace('        </activity>', link, 1)
+          open(p, 'w').write(s)
+          for g in ['android/app/build.gradle.kts', 'android/app/build.gradle']:
+              if os.path.exists(g):
+                  t = open(g).read()
+                  t = t.replace('applicationId = "app.tomo.tomo"', f'applicationId = "{app_id}"').replace('applicationId "app.tomo.tomo"', f'applicationId "{app_id}"')
+                  t = re.sub(r'minSdk = flutter\.minSdkVersion', 'minSdk = 23', t)
+                  open(g, 'w').write(t)
+          # ── iOS ──
+          p = 'ios/Runner.xcodeproj/project.pbxproj'; s = open(p).read()
+          s = s.replace('PRODUCT_BUNDLE_IDENTIFIER = app.tomo.tomo;', f'PRODUCT_BUNDLE_IDENTIFIER = {app_id};')
+          open(p, 'w').write(s)
+          p = 'ios/Runner/Info.plist'; s = open(p).read()
+          s = s.replace('<string>Tomo</string>', f'<string>{label}</string>')
+          add = f'''	<key>NSPhotoLibraryUsageDescription</key>
+          	<string>لاختيار فيديو أو صورة لنشرها</string>
+          	<key>NSCameraUsageDescription</key>
+          	<string>لتصوير فيديو ونشره</string>
+          	<key>NSMicrophoneUsageDescription</key>
+          	<string>لتسجيل الصوت مع الفيديو</string>
+          	<key>ITSAppUsesNonExemptEncryption</key>
+          	<false/>
+          	<key>FlutterDeepLinkingEnabled</key>
+          	<false/>
+          	<key>CFBundleURLTypes</key>
+          	<array>
+          		<dict>
+          			<key>CFBundleURLSchemes</key>
+          			<array><string>{app_id}</string></array>
+          		</dict>
+          	</array>
+          '''
+          add = '\n'.join(l[10:] if l.startswith(' ' * 10) else l for l in add.split('\n'))
+          i = s.rindex('</dict>')
+          s = s[:i] + add + s[i:]
+          open(p, 'w').write(s)
+          print('configured', app_id)
+          PY
+          grep -n "login-callback\|allowBackup" android/app/src/main/AndroidManifest.xml
+          grep -n "CFBundleURLSchemes" -A1 ios/Runner/Info.plist
+      - name: App icon
+        if: steps.chk.outputs.skip != '1'
+        run: flutter pub get && dart run flutter_launcher_icons
+      - name: Commit platforms
+        if: steps.chk.outputs.skip != '1'
+        run: |
+          git config user.name "app-bot"; git config user.email "bot@users.noreply.github.com"
+          git add -A android ios
+          git commit -m "Bootstrap android and ios platforms" || exit 0
+          git push

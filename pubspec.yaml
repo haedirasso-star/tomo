@@ -1,0 +1,43 @@
+name: tomo
+description: Tomo — short video social app by TO
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  supabase_flutter: ^2.8.4
+  video_player: ^2.9.2
+  flutter_cache_manager: ^3.4.1
+  cached_network_image: ^3.4.1
+  image_picker: ^1.1.2
+  fc_native_video_thumbnail: ^0.17.0
+  path_provider: ^2.1.5
+  shared_preferences: ^2.3.3
+  share_plus: ^10.1.4
+  url_launcher: ^6.3.1
+  wakelock_plus: ^1.2.10
+  google_fonts: ^6.2.1
+  flutter_secure_storage: ^9.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter:
+  uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/icon/icon.png
+  adaptive_icon_background: assets/icon/background.png
+  adaptive_icon_foreground: assets/icon/foreground.png
+  remove_alpha_ios: true

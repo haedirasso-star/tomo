@@ -1,0 +1,27 @@
+# فحص الكود (flutter analyze) لكل دفعة — النتيجة في فرع analyze-out
+name: Analyze
+on:
+  push:
+    branches-ignore: [analyze-out, apk-out]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { flutter-version: '3.29.3', channel: 'stable', cache: true }
+      - run: flutter pub get
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings > /tmp/analyze.txt 2>&1 || true
+      - name: Publish result
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          cd /tmp && rm -rf out && mkdir out && cd out && git init -q && git checkout -q -b analyze-out
+          cp /tmp/analyze.txt .
+          git config user.name "tomo-bot"; git config user.email "bot@users.noreply.github.com"
+          git add . && git commit -qm "analyze $SHA"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" analyze-out
+          grep -E "error •" /tmp/analyze.txt && exit 1 || true
