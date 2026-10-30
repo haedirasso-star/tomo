@@ -1,0 +1,35 @@
+# ③ يستلم أسرار TOTV المشفّرة (R2 + سر الجسر) ⇐ يفك تشفيرها بالمفتاح الخاص من الخزنة ⇐ يضبطها في دالة api ويعيد نشرها
+name: Bridge apply
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['bridge/totv.*']
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      REF: ${{ secrets.SUPABASE_PROJECT_REF || 'kjujtlehsgykzbreqyyo' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Decrypt
+        run: |
+          test -f bridge/totv.key.enc || { echo "::error::لم تصل أسرار TOTV بعد"; exit 1; }
+          V=.github/scripts/vault.sh
+          $V get bridge_priv | jq -r .pem > /tmp/priv.pem
+          base64 -d bridge/totv.key.enc | openssl pkeyutl -decrypt -inkey /tmp/priv.pem -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 > /tmp/k
+          base64 -d bridge/totv.json.enc | openssl enc -d -aes-256-cbc -pbkdf2 -pass file:/tmp/k > /tmp/s.json
+          rm -f /tmp/priv.pem /tmp/k
+          for k in $(jq -r 'keys[]' /tmp/s.json); do echo "::add-mask::$(jq -r --arg k "$k" '.[$k]' /tmp/s.json)"; done
+          jq -r 'to_entries[] | "\(.key)=\(.value)"' /tmp/s.json > /tmp/s.env
+          echo "::notice::وصلت $(wc -l < /tmp/s.env) قيم من TOTV"
+          $V put r2 "$(jq -c '{R2_ACCOUNT_ID,R2_ACCESS_KEY_ID,R2_SECRET_ACCESS_KEY,R2_BUCKET,R2_PUBLIC_URL}' /tmp/s.json)"
+          $V put bridge "$(jq -c '{secret: .TOTV_BRIDGE_SECRET}' /tmp/s.json)"
+      - uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - name: Set function secrets and deploy
+        run: |
+          supabase secrets set --env-file /tmp/s.env --project-ref "$REF" >/dev/null && echo "✓ secrets"
+          rm -f /tmp/s.env /tmp/s.json
+          supabase functions deploy api --project-ref "$REF" --no-verify-jwt

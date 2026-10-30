@@ -14,6 +14,9 @@ class Cfg {
   static const supportEmail = String.fromEnvironment('SUPPORT_EMAIL', defaultValue: 'support@tomo.app');
   /// رابط العودة بعد الدخول بغوغل/فيسبوك/آبل (يُسجَّل في Supabase ← Auth ← URL Configuration)
   static const authScheme = String.fromEnvironment('AUTH_SCHEME', defaultValue: 'app.tomo');
+  /// الدخول بغوغل عبر مشروع Firebase الخاص بـ TOTV (عميل الويب) — لا حاجة لحساب مطوّر ميتا أو إعداد Supabase
+  static const googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID',
+      defaultValue: '214530463737-bbqctoe8ftblj1gtfgdgcvrincrncv3q.apps.googleusercontent.com');
   static String get authRedirect => '$authScheme://login-callback';
   static bool get ready => supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 

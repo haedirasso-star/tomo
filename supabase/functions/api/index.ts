@@ -17,9 +17,27 @@ const SRK = env("SUPABASE_SERVICE_ROLE_KEY");
 const R2_ACC = env("R2_ACCOUNT_ID"), R2_AK = env("R2_ACCESS_KEY_ID"), R2_SK = env("R2_SECRET_ACCESS_KEY");
 const R2_BUCKET = env("R2_BUCKET");
 const R2_PUBLIC = env("R2_PUBLIC_URL").replace(/\/+$/, "");
-const GH_TOKEN = env("GH_TOKEN"), GH_REPO = env("GH_REPO"), ENCODE_SECRET = env("ENCODE_SECRET");
+// ★ الجسر مع TOTV: نفس مخزن R2 (مجلد tomo/ منفصل) · الضغط عبر GitHub · طلبات الترويج في تطبيق إدارة TOTV
+const BRIDGE = env("TOTV_BRIDGE_SECRET");
+const TOTV_PUSH = env("TOTV_PUSH_URL") || "https://hlmaksidfqdarwunedqj.supabase.co/functions/v1/push";
+const ENCODE = env("ENCODE_ENABLED") !== "0";
+const PREFIX = (env("R2_PREFIX") || "tomo").replace(/^\/+|\/+$/g, "");
+// غوغل: عميل الويب لمشروع Firebase الخاص بـ TOTV (+ أي معرّفات إضافية مفصولة بفاصلة)
+const GOOGLE_AUD = ["214530463737-bbqctoe8ftblj1gtfgdgcvrincrncv3q.apps.googleusercontent.com", ...env("GOOGLE_CLIENT_IDS").split(",")].map((x) => x.trim()).filter(Boolean);
 const r2Ready = () => !!(R2_ACC && R2_AK && R2_SK && R2_BUCKET && R2_PUBLIC);
-const encodeReady = () => !!(GH_TOKEN && GH_REPO && ENCODE_SECRET);
+const encodeReady = () => !!(BRIDGE && ENCODE);
+const safeEq = (a: string, b: string) => {
+  if (!a || !b || a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+};
+async function totv(op: string, body: Row) {
+  const r = await fetch(TOTV_PUSH, { method: "POST", headers: { "Content-Type": "application/json", "x-bridge": BRIDGE },
+    body: JSON.stringify({ action: "bridge", op, ...body }) });
+  if (!r.ok) throw new HttpErr(502, `TOTV ${r.status}: ${(await r.text()).slice(0, 120)}`);
+  return r.json();
+}
 
 const MAX_BYTES = 200 * 1024 * 1024;
 const MAX_PER_DAY = 25;
@@ -107,13 +125,9 @@ async function r2Del(key: string) {
 const pub = (key: string) => key ? `${R2_PUBLIC}/${keyPath(key)}` : "";
 const keyOfUrl = (u: string) => u.startsWith(`${R2_PUBLIC}/`) ? decodeURIComponent(u.slice(R2_PUBLIC.length + 1)) : "";
 
+/** الضغط: TOTV يرسل الطلب إلى GitHub (مستودع tomo) بمفتاحه — لا مفاتيح GitHub هنا */
 async function dispatchEncode(id: string, raw: string, out: string) {
-  const r = await fetch(`https://api.github.com/repos/${GH_REPO}/dispatches`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: "application/vnd.github+json", "User-Agent": "to-api", "Content-Type": "application/json" },
-    body: JSON.stringify({ event_type: "video-encode", client_payload: { id, raw, out } }),
-  });
-  if (!r.ok) throw new HttpErr(502, `GitHub ${r.status}`);
+  await totv("encode", { id, raw, out });
 }
 
 /** حذف كل ملفات فيديو من R2 (المضغوط · الأصلي · الغلاف) */
@@ -132,7 +146,7 @@ Deno.serve(async (req) => {
   try {
     // ════ من GitHub بعد الضغط (بسرّ مشترك) ════
     if (action === "encode_done") {
-      if (!ENCODE_SECRET || b.secret !== ENCODE_SECRET) throw new HttpErr(401, "unauthorized");
+      if (!safeEq(String(b.secret ?? ""), BRIDGE)) throw new HttpErr(401, "unauthorized");
       const id = clip(b.id, 40);
       if (!isUuid(id)) throw new HttpErr(400, "id");
       const v = ((await db(`videos?select=id,raw_key,path&id=eq.${id}`)) as Row[])[0];
@@ -151,6 +165,64 @@ Deno.serve(async (req) => {
           ? { status: "ready", url: pub(raw), path: raw, raw_key: "" } : { status: "failed" } });
       }
       return json({ ok: true });
+    }
+
+    // ════ من تطبيق إدارة TOTV عبر دالة push (بالسر المشترك) ════
+    if (action.startsWith("bridge_")) {
+      if (!safeEq(req.headers.get("x-bridge") ?? "", BRIDGE)) throw new HttpErr(401, "unauthorized");
+      const rpc = (fn: string, args: Row) => db(`rpc/${fn}`, { method: "POST", body: args });
+      switch (action) {
+        case "bridge_promos":
+          return json({ ok: true, items: await rpc("promo_list", { p_status: clip(b.status, 20) || "review" }) });
+        case "bridge_promo_set":
+          await rpc("promo_apply", { p_id: int(b.id), p_op: clip(b.op, 20), p_note: clip(b.note, 300), p_actor: null, p_by: clip(b.by, 120) });
+          return json({ ok: true });
+        case "bridge_receipt": {
+          const path = clip(b.path, 300);
+          if (!/^[0-9a-f-]{36}\/[A-Za-z0-9_.-]+$/.test(path)) throw new HttpErr(400, "path");
+          const r = await fetch(`${SB_URL}/storage/v1/object/sign/receipts/${path}`, {
+            method: "POST", headers: { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ expiresIn: 600 }),
+          });
+          const j = await r.json() as Row;
+          if (!r.ok || !j.signedURL) throw new HttpErr(404, "الوصل غير موجود");
+          return json({ ok: true, url: `${SB_URL}/storage/v1${j.signedURL}` });
+        }
+        case "bridge_stats":
+          return json({ ok: true, stats: await (async () => {
+            const c = (q: string) => db(q).then((x) => (x as Row[]).length).catch(() => 0);
+            return {
+              review: await c("promo_campaigns?select=id&status=eq.pending&pay_status=in.(submitted,paid,free)"),
+              active: await c("promo_campaigns?select=id&status=eq.active"),
+            };
+          })() });
+      }
+      throw new HttpErr(400, "bridge?");
+    }
+
+    // ════ الدخول بحساب غوغل (عميل Firebase الخاص بـ TOTV) ════
+    //  الهاتف يحصل على id_token من غوغل ⇐ نتحقق منه هنا ⇐ ننشئ الحساب إن لم يوجد ⇐ رمز دخول لمرة واحدة
+    if (action === "google_login") {
+      const tok = clip(b.id_token, 4096);
+      if (!tok) throw new HttpErr(400, "id_token");
+      const r = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(tok)}`);
+      const g = await r.json() as Row;
+      if (!r.ok || !GOOGLE_AUD.includes(String(g.aud ?? "")) || !["accounts.google.com", "https://accounts.google.com"].includes(String(g.iss ?? ""))
+          || String(g.email_verified) !== "true" || !g.email || int(g.exp) * 1000 < Date.now()) {
+        throw new HttpErr(401, "تعذّر التحقق من حساب غوغل");
+      }
+      const email = String(g.email).toLowerCase();
+      const H = { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" };
+      // إنشاء الحساب (إن وُجد مسبقاً يرجع خطأ ونكمل)
+      await fetch(`${SB_URL}/auth/v1/admin/users`, { method: "POST", headers: H, body: JSON.stringify({
+        email, email_confirm: true,
+        user_metadata: { name: clip(g.name, 40), full_name: clip(g.name, 40), avatar_url: clip(g.picture, 400), provider: "google" },
+      }) });
+      const l = await fetch(`${SB_URL}/auth/v1/admin/generate_link`, { method: "POST", headers: H, body: JSON.stringify({ type: "magiclink", email }) });
+      const lk = await l.json() as Row;
+      const hashed = String(lk.hashed_token ?? (lk.properties as Row | undefined)?.hashed_token ?? "");
+      if (!l.ok || !hashed) throw new HttpErr(502, "تعذّر إنشاء جلسة الدخول");
+      return json({ ok: true, token_hash: hashed });
     }
 
     const user = await userOf(req);
@@ -173,9 +245,9 @@ Deno.serve(async (req) => {
         if (today.length >= MAX_PER_DAY) throw new HttpErr(429, "وصلت حد النشر اليومي — جرّب غداً");
         const id = crypto.randomUUID();
         const enc = encodeReady();
-        const vkey = enc ? `raw/${user.id}/${id}.${ext}` : `v/${user.id}/${id}.${ext}`;
+        const vkey = enc ? `${PREFIX}/raw/${user.id}/${id}.${ext}` : `${PREFIX}/v/${user.id}/${id}.${ext}`;
         const ctype = ext === "mov" ? "video/quicktime" : ext === "webm" ? "video/webm" : "video/mp4";
-        const pkey = `v/${user.id}/${id}.jpg`;
+        const pkey = `${PREFIX}/v/${user.id}/${id}.jpg`;
         return json({
           ok: true, id, ext,
           video: { url: await r2Presign("PUT", vkey, 3 * 3600), type: ctype },
@@ -190,11 +262,11 @@ Deno.serve(async (req) => {
         const ext = clip(b.ext, 5).toLowerCase().replace(/[^a-z0-9]/g, "");
         if (!isUuid(id) || !VIDEO_EXT.has(ext)) throw new HttpErr(400, "طلب غير صالح");
         const enc = encodeReady();
-        const vkey = enc ? `raw/${user.id}/${id}.${ext}` : `v/${user.id}/${id}.${ext}`;
+        const vkey = enc ? `${PREFIX}/raw/${user.id}/${id}.${ext}` : `${PREFIX}/v/${user.id}/${id}.${ext}`;
         const size = await r2Head(vkey);
         if (!size) throw new HttpErr(409, "لم يكتمل رفع الفيديو — أعد المحاولة");
         if (size > MAX_BYTES) { await r2Del(vkey); throw new HttpErr(400, "الفيديو أكبر من الحد"); }
-        const pkey = `v/${user.id}/${id}.jpg`;
+        const pkey = `${PREFIX}/v/${user.id}/${id}.jpg`;
         const hasPoster = b.poster === true && (await r2Head(pkey)) > 0;
         const privacy = ["public", "friends", "private"].includes(String(b.privacy)) ? String(b.privacy) : "public";
         const row: Row = {
@@ -205,7 +277,7 @@ Deno.serve(async (req) => {
         };
         await db("videos", { method: "POST", prefer: "return=minimal", body: row });
         if (enc) {
-          try { await dispatchEncode(id, vkey, `v/${user.id}/${id}`); }
+          try { await dispatchEncode(id, vkey, `${PREFIX}/v/${user.id}/${id}`); }
           catch (e) {
             console.warn("[encode]", e);
             await db(`videos?id=eq.${id}`, { method: "PATCH", prefer: "return=minimal", body: { status: "ready", path: vkey, raw_key: "" } });
@@ -249,8 +321,19 @@ Deno.serve(async (req) => {
         return json({ ok: true });
       }
 
+      // إشعار تطبيق إدارة TOTV بطلب ترويج جديد
+      case "promo_notify": {
+        const id = int(b.id);
+        const c = ((await db(`promo_campaigns?select=id,user_id,budget,pay_status&id=eq.${id}`)) as Row[])[0];
+        if (!c || c.user_id !== user.id || c.pay_status !== "submitted") return json({ ok: true });
+        if (BRIDGE) {
+          try { await totv("notify", { code: `TO-P-${String(id).padStart(6, "0")}`, budget: int(c.budget) }); } catch (e) { console.warn("[notify]", e); }
+        }
+        return json({ ok: true });
+      }
+
       case "status":
-        return json({ ok: true, storage: r2Ready(), encode: encodeReady() });
+        return json({ ok: true, storage: r2Ready(), encode: encodeReady(), bridge: !!BRIDGE });
     }
     throw new HttpErr(400, "إجراء غير معروف");
   } catch (e) {

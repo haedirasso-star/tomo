@@ -17,3 +17,4 @@ ios/Flutter/flutter_export_environment.sh
 ios/.symlinks/
 .env
 *.log
+android/app/*.jks

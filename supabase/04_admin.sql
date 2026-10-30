@@ -7,11 +7,11 @@
 --  تعيين أول مدير (مرة واحدة من SQL Editor):  update profiles set role = 'admin' where username = 'اسمك';
 -- ════════════════════════════════════════════════════════════════════
 
-create or replace function public.admin_promos(p_status text default 'review')
+-- النسخة الداخلية (يستدعيها المشرف من التطبيق، أو تطبيق إدارة TOTV عبر الجسر بمفتاح الخدمة)
+create or replace function public.promo_list(p_status text default 'review')
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare r jsonb;
 begin
-  if not public.is_staff() then raise exception 'غير مسموح'; end if;
   select coalesce(jsonb_agg(x order by x.created_at desc), '[]'::jsonb) into r from (
     select c.*, public.promo_code(c.id) as code, p.username, p.name, v.poster, v.url, v.caption
       from public.promo_campaigns c
@@ -28,13 +28,27 @@ begin
   return r;
 end $$;
 
+create or replace function public.admin_promos(p_status text default 'review')
+returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_staff() then raise exception 'غير مسموح'; end if;
+  return public.promo_list(p_status);
+end $$;
+
 create or replace function public.admin_promo_set(p_id bigint, p_op text, p_note text default '')
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_staff() then raise exception 'غير مسموح'; end if;
+  perform public.promo_apply(p_id, p_op, p_note, auth.uid(), '');
+end $$;
+
+/** تنفيذ قرار على طلب ترويج — p_by: من نفّذ (بريد مشرف TOTV عند القرار من تطبيق الإدارة) */
+create or replace function public.promo_apply(p_id bigint, p_op text, p_note text, p_actor uuid, p_by text)
 returns void language plpgsql security definer set search_path = public as $$
 declare
   c public.promo_campaigns;
   msg text := '';
 begin
-  if not public.is_staff() then raise exception 'غير مسموح'; end if;
   select * into c from public.promo_campaigns where id = p_id for update;
   if not found then raise exception 'الطلب غير موجود'; end if;
   case p_op
@@ -61,7 +75,8 @@ begin
       msg := 'انتهى ترويج ' || public.promo_code(p_id) || '. التقرير الكامل في «ترويجاتي».';
     else raise exception 'إجراء غير معروف';
   end case;
-  insert into public.mod_log (actor, action, target, note) values (auth.uid(), 'promo_' || p_op, p_id::text, left(p_note, 300));
+  insert into public.mod_log (actor, action, target, note)
+  values (p_actor, 'promo_' || p_op, p_id::text, left(concat_ws(' · ', nullif(p_by, ''), nullif(p_note, '')), 300));
   if msg <> '' then
     insert into public.notifications (user_id, actor, kind, body) values (c.user_id, null, 'system', msg);
   end if;
@@ -185,6 +200,9 @@ end $$;
 do $$
 declare f text;
 begin
+  revoke all on function public.promo_list(text) from public, anon, authenticated;
+  revoke all on function public.promo_apply(bigint, text, text, uuid, text) from public, anon, authenticated;
+  grant execute on function public.promo_list(text), public.promo_apply(bigint, text, text, uuid, text) to service_role;
   foreach f in array array['admin_promos(text)', 'admin_promo_set(bigint, text, text)', 'admin_reports(text)',
                            'admin_report_set(bigint, text, text)', 'admin_ban(uuid, boolean, text)', 'admin_set_role(uuid, text)',
                            'admin_verify(uuid, boolean)', 'admin_setting(text, jsonb)', 'admin_stats()'] loop

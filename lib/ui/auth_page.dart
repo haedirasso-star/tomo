@@ -231,6 +231,30 @@ class _AuthPageState extends State<AuthPage> {
     if (mounted) setState(() => _busy = false);
   }
 
+  /// غوغل: نافذة اختيار الحساب الأصلية ⇐ الخادم يتحقق ويعطي رمز دخول لمرة واحدة ⇐ جلسة
+  Future<void> _google() async {
+    setState(() { _err = ''; _busy = true; });
+    try {
+      final g = GoogleSignIn(serverClientId: Cfg.googleWebClientId, scopes: const ['email', 'profile']);
+      try { await g.signOut(); } catch (_) {}
+      final acc = await g.signIn();
+      if (acc == null) { if (mounted) setState(() => _busy = false); return; }
+      final idToken = (await acc.authentication).idToken;
+      if (idToken == null) throw Exception('تعذّر الحصول على بيانات غوغل');
+      final r = await Api.fn('google_login', {'id_token': idToken});
+      await sb.auth.verifyOTP(type: OtpType.magiclink, tokenHash: r.s('token_hash'));
+      await Me.refresh();
+      if (mounted) Navigator.of(context).pop(true);
+      return;
+    } on PlatformException catch (e) {
+      if (mounted) setState(() => _err = e.code == 'sign_in_failed'
+          ? 'الدخول بغوغل غير مفعّل لهذه النسخة بعد — استخدم البريد الإلكتروني' : 'تعذّر الدخول بغوغل (${e.code})');
+    } catch (e) {
+      if (mounted) setState(() => _err = errText(e));
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
   Future<void> _email() async {
     final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => _signup ? const _SignupFlow() : const _LoginPage()));
     if (ok == true && mounted) Navigator.of(context).pop(true);
@@ -258,10 +282,8 @@ class _AuthPageState extends State<AuthPage> {
               const SizedBox(height: 30),
               _Method(icon: Icons.person_outline_rounded, label: _signup ? 'استخدام البريد الإلكتروني' : 'استخدام البريد الإلكتروني / اسم المستخدم',
                   onTap: _busy ? null : _email),
-              _Method(iconWidget: const _BrandIcon('f', Color(0xFF1877F2)), label: 'المتابعة باستخدام Facebook',
-                  onTap: _busy ? null : () => _social(OAuthProvider.facebook)),
               _Method(iconWidget: const _GoogleG(), label: 'المتابعة باستخدام Google',
-                  onTap: _busy ? null : () => _social(OAuthProvider.google)),
+                  onTap: _busy ? null : _google),
               if (io.Platform.isIOS)
                 _Method(icon: Icons.apple_rounded, label: 'المتابعة باستخدام Apple', onTap: _busy ? null : () => _social(OAuthProvider.apple)),
               if (_busy) const Padding(padding: EdgeInsets.only(top: 12), child: Loading()),
@@ -334,17 +356,6 @@ class _Method extends StatelessWidget {
             ),
           ),
         ),
-      );
-}
-
-class _BrandIcon extends StatelessWidget {
-  final String letter;
-  final Color color;
-  const _BrandIcon(this.letter, this.color);
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 22, height: 22, decoration: BoxDecoration(color: color, shape: BoxShape.circle), alignment: Alignment.bottomCenter,
-        child: Text(letter, textDirection: TextDirection.ltr, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white, height: 1.15)),
       );
 }
 

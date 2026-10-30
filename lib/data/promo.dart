@@ -114,6 +114,8 @@ class PromoApi {
     final path = '${myId!}/p${p.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
     await sb.storage.from('receipts').upload(path, receipt, fileOptions: const FileOptions(contentType: 'image/jpeg'));
     await sb.rpc('promo_pay', params: {'p_id': p.id, 'p_method': method, 'p_receipt': path, 'p_txn': txn});
+    // إشعار فوري لتطبيق إدارة TOTV (الطلبات موحّدة هناك)
+    unawaited(Api.fn('promo_notify', {'id': p.id}).then((_) {}, onError: (_) {}));
   }
 
   static Future<List<Promo>> mine() async {

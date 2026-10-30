@@ -1,0 +1,52 @@
+# ① مفاتيح Tomo الخاصة (مرة واحدة): زوج مفاتيح الجسر مع TOTV + مفتاح توقيع أندرويد الثابت
+#    كلاهما يُحفظ في خزنة Tomo (قاعدة البيانات) — يُنشر فقط المفتاح العام bridge/tomo_pub.pem
+name: Bridge keys
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/bridge_keys.yml']
+permissions:
+  contents: write
+jobs:
+  keys:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      REF: ${{ secrets.SUPABASE_PROJECT_REF || 'kjujtlehsgykzbreqyyo' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Bridge keypair
+        run: |
+          V=.github/scripts/vault.sh
+          if [ -z "$($V get bridge_priv)" ]; then
+            openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out /tmp/priv.pem 2>/dev/null
+            $V put bridge_priv "$(jq -n --arg p "$(cat /tmp/priv.pem)" '{pem:$p}')"
+            echo "::notice::أُنشئ زوج مفاتيح الجسر"
+          else
+            $V get bridge_priv | jq -r .pem > /tmp/priv.pem
+          fi
+          mkdir -p bridge && openssl pkey -in /tmp/priv.pem -pubout -out bridge/tomo_pub.pem && rm -f /tmp/priv.pem
+      - name: Android signing key
+        run: |
+          V=.github/scripts/vault.sh
+          K=$($V get android_keystore)
+          if [ -z "$K" ]; then
+            P=$(openssl rand -hex 16)
+            keytool -genkeypair -v -keystore /tmp/tomo.jks -alias tomo -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$P" -keypass "$P" -dname "CN=Tomo, O=TO, C=IQ" >/dev/null 2>&1
+            $V put android_keystore "$(jq -n --arg b "$(base64 -w0 /tmp/tomo.jks)" --arg p "$P" '{b64:$b, pass:$p, alias:"tomo"}')"
+            echo "::notice::أُنشئ مفتاح توقيع أندرويد الثابت"
+          else
+            echo "$K" | jq -r .b64 | base64 -d > /tmp/tomo.jks; P=$(echo "$K" | jq -r .pass)
+          fi
+          SHA1=$(keytool -list -v -keystore /tmp/tomo.jks -storepass "$P" -alias tomo | awk '/SHA1:/{print $2}')
+          SHA256=$(keytool -list -v -keystore /tmp/tomo.jks -storepass "$P" -alias tomo | awk '/SHA256:/{print $2}')
+          echo "SHA1=$SHA1" > bridge/android_fingerprints.txt; echo "SHA256=$SHA256" >> bridge/android_fingerprints.txt
+          echo "::notice::SHA-1 $SHA1"
+          rm -f /tmp/tomo.jks
+      - name: Commit public parts
+        run: |
+          git config user.name "tomo-bot"; git config user.email "bot@users.noreply.github.com"
+          git add bridge && git commit -m "Bridge public key and Android fingerprints" || exit 0
+          git pull --rebase -q && git push
