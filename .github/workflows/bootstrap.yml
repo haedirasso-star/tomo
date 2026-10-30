@@ -55,7 +55,13 @@ jobs:
                   t = open(g).read()
                   t = t.replace('applicationId = "app.tomo.tomo"', f'applicationId = "{app_id}"').replace('applicationId "app.tomo.tomo"', f'applicationId "{app_id}"')
                   t = re.sub(r'minSdk = flutter\.minSdkVersion', 'minSdk = 23', t)
+                  t = t.replace('ndkVersion = flutter.ndkVersion', 'ndkVersion = "27.0.12077973"')
                   open(g, 'w').write(t)
+          sg = 'android/settings.gradle.kts'
+          if os.path.exists(sg):
+              t = open(sg).read()
+              t = re.sub(r'id\("org\.jetbrains\.kotlin\.android"\) version "[0-9.]+"', 'id("org.jetbrains.kotlin.android") version "2.0.21"', t)
+              open(sg, 'w').write(t)
           # ── iOS ──
           p = 'ios/Runner.xcodeproj/project.pbxproj'; s = open(p).read()
           s = s.replace('PRODUCT_BUNDLE_IDENTIFIER = app.tomo.tomo;', f'PRODUCT_BUNDLE_IDENTIFIER = {app_id};')

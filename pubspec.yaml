@@ -41,3 +41,7 @@ flutter_launcher_icons:
   adaptive_icon_background: assets/icon/background.png
   adaptive_icon_foreground: assets/icon/foreground.png
   remove_alpha_ios: true
+
+# share_plus يسحب package_info_plus 9 الذي يحتاج Kotlin 2.2 — نثبّته على 8 المتوافق مع Flutter 3.29
+dependency_overrides:
+  package_info_plus: ^8.1.2
