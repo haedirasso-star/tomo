@@ -80,7 +80,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
       _p = p;
       if (_mine) Me.profile = p;
       if (!_mine && Me.signedIn) {
-        final r = await Future.wait([
+        final r = await Future.wait<Object?>([
           Api.isFollowing(widget.uid),
           sb.from('follows').select('follower').eq('follower', widget.uid).eq('followee', myId!).maybeSingle(),
         ]);

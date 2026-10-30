@@ -108,8 +108,8 @@ class _SplashIntroState extends State<SplashIntro> with SingleTickerProviderStat
 
 /// «from TO» أسفل الشاشة (مثل from Meta)
 class _FromTo extends StatelessWidget {
-  final bool dark;
-  const _FromTo({this.dark = false});
+  const _FromTo();
+  static const bool dark = false;
   @override
   Widget build(BuildContext context) => Column(mainAxisSize: MainAxisSize.min, children: [
         Text('from', textDirection: TextDirection.ltr, style: GoogleFonts.poppins(fontSize: 13, color: dark ? Colors.white54 : E.ink3)),
