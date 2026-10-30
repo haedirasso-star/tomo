@@ -32,6 +32,10 @@ const safeEq = (a: string, b: string) => {
   for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return d === 0;
 };
+async function hmacHex(key: string, data: string) {
+  const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return [...new Uint8Array(await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(data)))].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
 async function totv(op: string, body: Row) {
   const r = await fetch(TOTV_PUSH, { method: "POST", headers: { "Content-Type": "application/json", "x-bridge": BRIDGE },
     body: JSON.stringify({ action: "bridge", op, ...body }) });
@@ -146,7 +150,9 @@ Deno.serve(async (req) => {
   try {
     // ════ من GitHub بعد الضغط (بسرّ مشترك) ════
     if (action === "encode_done") {
-      if (!safeEq(String(b.secret ?? ""), BRIDGE)) throw new HttpErr(401, "unauthorized");
+      // توقيع لكل فيديو: HMAC(السر المشترك, id) — يصل من مستودع totv-sports بعد الضغط
+      const sigOk = BRIDGE && safeEq(String(b.sig ?? ""), await hmacHex(BRIDGE, String(b.id ?? "")));
+      if (!sigOk && !safeEq(String(b.secret ?? ""), BRIDGE)) throw new HttpErr(401, "unauthorized");
       const id = clip(b.id, 40);
       if (!isUuid(id)) throw new HttpErr(400, "id");
       const v = ((await db(`videos?select=id,raw_key,path&id=eq.${id}`)) as Row[])[0];

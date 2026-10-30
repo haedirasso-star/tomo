@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['bridge/totv.*']
+    paths: ['.github/workflows/bridge_apply.yml']
 jobs:
   apply:
     runs-on: ubuntu-latest
@@ -15,11 +15,13 @@ jobs:
       - uses: actions/checkout@v5
       - name: Decrypt
         run: |
-          test -f bridge/totv.key.enc || { echo "::error::لم تصل أسرار TOTV بعد"; exit 1; }
+          B="${{ vars.TOTV_CDN || 'https://cdn.totv.app' }}/bridge/tomo"
+          curl -sf "$B/totv.key.enc?t=$(date +%s)" -o /tmp/totv.key.enc && curl -sf "$B/totv.json.enc?t=$(date +%s)" -o /tmp/totv.json.enc \
+            || { echo "::error::لم تصل أسرار TOTV بعد ($B)"; exit 1; }
           V=.github/scripts/vault.sh
           $V get bridge_priv | jq -r .pem > /tmp/priv.pem
-          base64 -d bridge/totv.key.enc | openssl pkeyutl -decrypt -inkey /tmp/priv.pem -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 > /tmp/k
-          base64 -d bridge/totv.json.enc | openssl enc -d -aes-256-cbc -pbkdf2 -pass file:/tmp/k > /tmp/s.json
+          base64 -d /tmp/totv.key.enc | openssl pkeyutl -decrypt -inkey /tmp/priv.pem -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 > /tmp/k
+          base64 -d /tmp/totv.json.enc | openssl enc -d -aes-256-cbc -pbkdf2 -pass file:/tmp/k > /tmp/s.json
           rm -f /tmp/priv.pem /tmp/k
           for k in $(jq -r 'keys[]' /tmp/s.json); do echo "::add-mask::$(jq -r --arg k "$k" '.[$k]' /tmp/s.json)"; done
           jq -r 'to_entries[] | "\(.key)=\(.value)"' /tmp/s.json > /tmp/s.env
