@@ -62,6 +62,13 @@ jobs:
               t = open(sg).read()
               t = re.sub(r'id\("org\.jetbrains\.kotlin\.android"\) version "[0-9.]+"', 'id("org.jetbrains.kotlin.android") version "2.0.21"', t)
               open(sg, 'w').write(t)
+          # إعدادات بناء أندرويد المجرّبة في TOTV (Gradle 8.11.1 · Java 17)
+          w = 'android/gradle/wrapper/gradle-wrapper.properties'
+          t = open(w).read(); t = re.sub(r'gradle-[0-9.]+-all\.zip', 'gradle-8.11.1-all.zip', t); open(w, 'w').write(t)
+          g = 'android/app/build.gradle.kts'
+          if os.path.exists(g):
+              t = open(g).read().replace('JavaVersion.VERSION_11', 'JavaVersion.VERSION_17'); open(g, 'w').write(t)
+          open('android/gradle.properties', 'w').write('org.gradle.jvmargs=-Xmx4g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8\norg.gradle.parallel=true\norg.gradle.caching=true\nandroid.useAndroidX=true\nandroid.enableJetifier=true\nandroid.nonTransitiveRClass=true\nkotlin.code.style=official\nkotlin.incremental=true\n')
           # ── iOS ──
           p = 'ios/Runner.xcodeproj/project.pbxproj'; s = open(p).read()
           s = s.replace('PRODUCT_BUNDLE_IDENTIFIER = app.tomo.tomo;', f'PRODUCT_BUNDLE_IDENTIFIER = {app_id};')
