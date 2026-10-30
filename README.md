@@ -19,7 +19,7 @@
 
 ## الإعداد
 ### 1) Supabase
-أنشئ مشروعاً ⇐ أضف أسرار GitHub: `SUPABASE_URL` · `SUPABASE_ANON_KEY` · `SUPABASE_PROJECT_REF` · `SUPABASE_ACCESS_TOKEN`
+أنشئ مشروعاً ⇐ أضف أسرار GitHub: `SUPABASE_ANON_KEY` · `SUPABASE_ACCESS_TOKEN` (الرابط ومعرّف المشروع مضبوطان)
 - Authentication ← Providers: Email (Confirm email مفعّل) · Google · Facebook · Apple
 - Authentication ← URL Configuration ← Redirect URLs: `app.tomo://login-callback`
 - Authentication ← Policies: أقل طول لكلمة المرور 8

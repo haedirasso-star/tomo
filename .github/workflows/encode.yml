@@ -23,7 +23,7 @@ jobs:
       AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
       R2_BUCKET: ${{ secrets.R2_BUCKET }}
       ENCODE_SECRET: ${{ secrets.ENCODE_SECRET }}
-      API_URL: ${{ secrets.SUPABASE_URL }}/functions/v1/api
+      API_URL: ${{ secrets.SUPABASE_URL || 'https://kjujtlehsgykzbreqyyo.supabase.co' }}/functions/v1/api
     steps:
       - name: Validate
         run: |
