@@ -1,0 +1,23 @@
+# فحص الجسر بالاتجاهين (لا يطبع أي سر)
+name: Bridge check
+on: workflow_dispatch
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      REF: ${{ secrets.SUPABASE_PROJECT_REF || 'kjujtlehsgykzbreqyyo' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check
+        run: |
+          S=$(.github/scripts/vault.sh get bridge | jq -r .secret); echo "::add-mask::$S"
+          A="https://$REF.supabase.co/functions/v1/api"
+          c=$(curl -s -o /tmp/a.json -w '%{http_code}' -X POST "$A" -H 'Content-Type: application/json' -H "x-bridge: $S" -d '{"action":"bridge_stats"}')
+          echo "::notice::Tomo api bridge_stats → $c $(cat /tmp/a.json | head -c 200)"
+          c=$(curl -s -o /tmp/b.json -w '%{http_code}' -X POST "$A" -H 'Content-Type: application/json' -H "x-bridge: wrong" -d '{"action":"bridge_stats"}')
+          echo "::notice::Tomo api wrong secret → $c (يجب 401)"
+          c=$(curl -s -o /tmp/c.json -w '%{http_code}' -X POST https://hlmaksidfqdarwunedqj.supabase.co/functions/v1/push -H 'Content-Type: application/json' -H "x-bridge: $S" -d '{"action":"bridge","op":"ping"}')
+          echo "::notice::TOTV push bridge auth → $c $(head -c 80 /tmp/c.json) (400 op = السر صحيح)"
+          c=$(curl -s -o /tmp/d.json -w '%{http_code}' -X POST "$A" -H 'Content-Type: application/json' -d '{"action":"status"}')
+          echo "::notice::Tomo api status (no login) → $c"
