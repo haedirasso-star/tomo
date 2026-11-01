@@ -547,6 +547,10 @@ do $$ begin
   drop policy if exists tomo_media_upd on storage.objects;
   create policy tomo_media_upd on storage.objects for update to authenticated
     using (bucket_id in ('videos', 'avatars') and (storage.foldername(name))[1] = auth.uid()::text);
+  -- القراءة مطلوبة لاستبدال ملف موجود (upsert) مثل صورة الملف الشخصي
+  drop policy if exists tomo_media_sel on storage.objects;
+  create policy tomo_media_sel on storage.objects for select to authenticated
+    using (bucket_id in ('videos', 'avatars') and (storage.foldername(name))[1] = auth.uid()::text);
   drop policy if exists tomo_media_del on storage.objects;
   create policy tomo_media_del on storage.objects for delete to authenticated
     using (bucket_id in ('videos', 'avatars') and (storage.foldername(name))[1] = auth.uid()::text);
