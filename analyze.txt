@@ -1,0 +1,9 @@
+Analyzing tomo...                                               
+
+   info • The parameter name 's' doesn't match the name 'state' in the overridden method • lib/data/trk.dart:33:53 • avoid_renaming_method_parameters
+   info • Statements in an if should be enclosed in a block • lib/ui/auth_page.dart:250:20 • curly_braces_in_flow_control_structures
+   info • The parameter name 'old' doesn't match the name 'oldWidget' in the overridden method • lib/ui/feed/feed_page.dart:141:45 • avoid_renaming_method_parameters
+   info • The parameter name 's' doesn't match the name 'state' in the overridden method • lib/ui/feed/feed_page.dart:169:53 • avoid_renaming_method_parameters
+   info • Statements in an if should be enclosed in a block • lib/ui/profile/settings_page.dart:182:108 • curly_braces_in_flow_control_structures
+
+5 issues found. (ran in 17.7s)
